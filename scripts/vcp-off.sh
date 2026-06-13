@@ -9,6 +9,7 @@ echo "Stopping VCP on ${SERVICE_NAME}..."
 railway down \
   --project "${PROJECT_ID}" \
   --environment "${ENVIRONMENT}" \
-  --service "${SERVICE_NAME}"
+  --service "${SERVICE_NAME}" \
+  --yes
 
 echo "VCP stopped — no compute running"
