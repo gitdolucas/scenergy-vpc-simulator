@@ -6,10 +6,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/railway-env.sh"
 
 echo "Stopping VCP on ${SERVICE_NAME}..."
-railway down \
+
+if ! railway down \
   --project "${PROJECT_ID}" \
   --environment "${ENVIRONMENT}" \
   --service "${SERVICE_NAME}" \
-  --yes
+  --yes 2>&1; then
+  echo "VCP already idle (no active deployment)"
+  exit 0
+fi
 
 echo "VCP stopped — no compute running"
