@@ -2,7 +2,7 @@ FROM node:22-alpine
 
 ARG VCP_REF=b32a57ccb5ce793cab2b8bc9bb9d6e26cc7d780a
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git bash
 
 WORKDIR /app
 

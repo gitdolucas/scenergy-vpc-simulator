@@ -12,4 +12,5 @@ fi
 railway link \
   --project "${PROJECT_ID}" \
   --environment "${ENVIRONMENT}" \
+  --service "${SERVICE_NAME}" \
   --json >/dev/null 2>&1 || true
