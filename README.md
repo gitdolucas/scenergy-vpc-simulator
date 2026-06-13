@@ -27,9 +27,11 @@ While running, the mobile app can start/stop real OCPP charging sessions against
 | **Manual off** | None | `./scripts/vcp-off.sh` |
 
 ```bash
-./scripts/vcp-on.sh    # start a fresh ~30 min session
+./scripts/vcp-on.sh    # build + deploy (~30 min session)
 ./scripts/vcp-off.sh   # stop immediately
 ```
+
+`vcp-on` runs `railway up` (fresh Docker build). Avoid `railway redeploy` — it reuses a stale image and fails after `vcp-off` removed the deployment.
 
 ## One-time setup
 
