@@ -10,7 +10,7 @@ railway redeploy \
   --project "${PROJECT_ID}" \
   --environment "${ENVIRONMENT}" \
   --service "${SERVICE_NAME}" \
-  --detach
+  --yes
 
 echo "VCP started — auto-stops after ${VCP_TTL_SECONDS}s unless you run vcp-off.sh first"
 echo "Logs: railway logs --service ${SERVICE_NAME} --project ${PROJECT_ID} --lines 50"
