@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "/usr/local/bin/run-with-ttl.sh"
+restartPolicyType = "NEVER"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
