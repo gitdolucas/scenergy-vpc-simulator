@@ -10,8 +10,7 @@ RUN git clone https://github.com/solidstudiosh/ocpp-virtual-charge-point.git . \
     && git fetch --depth 1 origin "${VCP_REF}" \
     && git checkout "${VCP_REF}"
 
-# Overwrite upstream entry with our patched one that registers the VCP for
-# AUTO_RESTART (upstream's 2-connector entry can't auto-restart after a WS drop).
+COPY patches/index_16.ts /app/index_16.ts
 COPY patches/index_16_2_connectors.ts /app/index_16_2_connectors.ts
 
 RUN npm ci
@@ -21,6 +20,7 @@ RUN chmod +x /usr/local/bin/run-with-ttl.sh
 
 ENV ADMIN_PORT=9999
 ENV VCP_TTL_SECONDS=1800
+ENV VCP_ENTRY=index_16_2_connectors.ts
 
 EXPOSE 9999
 

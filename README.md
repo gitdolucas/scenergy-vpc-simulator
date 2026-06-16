@@ -1,37 +1,44 @@
 # scenergy-vpc-simulator
 
-Ephemeral **OCPP 1.6 Virtual Charge Point** for [SC Energy](https://github.com/gitdolucas/scenergy). Connects to production `scenergy-api` as the demo station **SC Energy Itaim** and shuts down automatically to save Railway compute.
+Ephemeral **OCPP 1.6 Virtual Charge Point** simulators for [SC Energy](https://github.com/gitdolucas/scenergy). Two Railway services connect to production `scenergy-api` and shut down automatically to save compute.
 
-## What this is
+## Stations
 
-| Role | Service |
-| ---- | ------- |
-| Central System (CSMS) | `scenergy-api` on Railway |
-| Charge point (this repo) | Simulated hardware over WebSocket |
+| Railway service | Station | CP_ID | VCP entry |
+| --------------- | ------- | ----- | --------- |
+| `scenergy-vpc-itaim` | SC Energy Itaim (2× 150 kW) | `a1111111-1111-4111-a111-111111111111` | `index_16_2_connectors.ts` |
+| `scenergy-vpc-alles` | SC Energy Alles Park (40 kW) | `b2222222-2222-4222-b222-222222222222` | `index_16.ts` |
 
-This is **not** an OCPP server — it is a charge-point client that talks to the backend at:
+WebSocket URLs:
 
 ```text
 wss://scenergy-api-production.up.railway.app/ocpp/a1111111-1111-4111-a111-111111111111
+wss://scenergy-api-production.up.railway.app/ocpp/b2222222-2222-4222-b222-222222222222
 ```
 
-While running, the mobile app can start/stop real OCPP charging sessions against the demo connectors (`SCIT-5123-01`, etc.). When idle, the charge point is offline and the API returns `OCPP_UNREACHABLE`.
+While a VCP is running, the mobile app can start/stop real OCPP sessions on that station. When idle, the charge point is offline and the API returns `OCPP_UNREACHABLE`.
 
 ## Lifecycle
 
 | State | Compute cost | How |
 | ----- | -------------- | --- |
 | **Idle** | None | Default — no active deployment |
-| **Running** | Billed | `./scripts/vcp-on.sh` |
+| **Running** | Billed | `./scripts/vcp-on-all.sh` (both) or per-station scripts below |
 | **Auto off** | None | Container exits after **30 min** (`VCP_TTL_SECONDS=1800`) |
-| **Manual off** | None | `./scripts/vcp-off.sh` |
+| **Manual off** | None | `./scripts/vcp-off-all.sh` or per-station `vcp-off.sh` |
 
 ```bash
-./scripts/vcp-on.sh    # build + deploy (~30 min session)
-./scripts/vcp-off.sh   # stop immediately
+./scripts/vcp-on-all.sh      # both stations (~30 min each)
+./scripts/vcp-off-all.sh     # stop both immediately
+
+./scripts/vcp-on-itaim.sh    # Itaim only
+./scripts/vcp-on-alles.sh    # Alles Park only
+RAILWAY_SERVICE_NAME=scenergy-vpc-itaim ./scripts/vcp-off.sh   # stop one
 ```
 
-`vcp-on` runs `railway up` (fresh Docker build). Avoid `railway redeploy` — it reuses a stale image and fails after `vcp-off` removed the deployment.
+`vcp-on-*` runs `railway up` (fresh Docker build). Avoid `railway redeploy` — it reuses a stale image and fails after `vcp-off` removed the deployment.
+
+**Railway services:** only `scenergy-vpc-itaim` and `scenergy-vpc-alles`. The legacy `scenergy-vpc-simulator` service was removed — use Itaim instead.
 
 ## One-time setup
 
@@ -39,56 +46,47 @@ While running, the mobile app can start/stop real OCPP charging sessions against
 
 - [Railway CLI](https://docs.railway.com/cli): `npm i -g @railway/cli && railway login`
 - Access to Railway project `e3b38292-35ba-4fa8-8bc3-000a43fa06d2`
-- Backend deployed with stable demo charge point ID (see scenergy-backend `prisma/demo-charge-point.ts`)
+- Backend deployed with stable charge point IDs (see `scenergy-backend/prisma/demo-charge-point.ts`)
 
-### Bootstrap Railway service
+### Bootstrap Railway services
 
 ```bash
 chmod +x scripts/*.sh
-./scripts/deploy-railway.sh
-./scripts/vcp-off.sh   # optional: leave idle after first deploy
+./scripts/deploy-railway-itaim.sh
+./scripts/deploy-railway-alles.sh
+RAILWAY_SERVICE_NAME=scenergy-vpc-itaim ./scripts/vcp-off.sh   # optional: leave idle
 ```
 
-Connect GitHub repo in Railway dashboard for future deploys, or keep using `vcp-on.sh` (redeploy) as the primary trigger.
+Aliases: `deploy-railway.sh` → Itaim bootstrap, `vcp-on.sh` → Itaim only.
 
 ## Environment variables
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `WS_URL` | `wss://scenergy-api-production.up.railway.app/ocpp` | CSMS WebSocket base (VCP appends `/${CP_ID}`) |
-| `CP_ID` | `a1111111-1111-4111-a111-111111111111` | Must match backend seed |
-| `VCP_TTL_SECONDS` | `1800` | Session length before auto shutdown |
-| `ADMIN_PORT` / `PORT` | `9999` | Health check + admin API |
+| Variable | Itaim default | Alles default | Description |
+| -------- | ------------- | ------------- | ----------- |
+| `WS_URL` | `wss://scenergy-api-production.up.railway.app/ocpp` | same | CSMS WebSocket base (VCP appends `/${CP_ID}`) |
+| `CP_ID` | `a1111111-...` | `b2222222-...` | Must match backend seed |
+| `VCP_ENTRY` | `index_16_2_connectors.ts` | `index_16.ts` | Patched VCP entry script |
+| `VCP_TTL_SECONDS` | `1800` | `1800` | Session length before auto shutdown |
+| `ADMIN_PORT` / `PORT` | `9999` | `9999` | Health check + admin API |
 
-Copy [`.env.example`](.env.example) for local reference; production values are set on Railway.
+Copy [`.env.example`](.env.example) for local reference.
 
 ## Verify
 
-1. `./scripts/vcp-on.sh`
-2. `railway logs --service scenergy-vpc-simulator --lines 50`
-   - Expect: WebSocket connected, `BootNotification` Accepted, heartbeats
-3. API logs: `Charge point connected: a1111111-...`
-4. Mobile (`FLAVOR=prod`): login `demo@scenergy.dev`, start charging at **SC Energy Itaim**
-5. After TTL or `vcp-off.sh`, charging via OCPP should fail (expected)
-
-## Admin API (while running)
-
-```bash
-railway run --service scenergy-vpc-simulator curl -s http://localhost:9999/health
-```
-
-See [ocpp-virtual-charge-point](https://github.com/solidstudiosh/ocpp-virtual-charge-point) for `POST /execute` actions.
+1. `./scripts/vcp-on-all.sh`
+2. `railway logs --service scenergy-vpc-itaim --lines 50` — BootNotification Accepted
+3. `railway logs --service scenergy-vpc-alles --lines 50` — same for Alles
+4. Mobile (`FLAVOR=prod`): start charging at **SC Energy Itaim** or **SC Energy Alles Park**
+5. `./scripts/vcp-off-all.sh` when done
 
 ## Local development
-
-Point at local backend:
 
 ```bash
 export WS_URL=ws://localhost:3000/ocpp
 export CP_ID=a1111111-1111-4111-a111-111111111111
-export VCP_TTL_SECONDS=3600
-docker build -t scenergy-vpc .
-docker run --rm -e WS_URL -e CP_ID -e VCP_TTL_SECONDS scenergy-vpc
+export VCP_ENTRY=index_16_2_connectors.ts
+docker build -t scenergy-vpc-itaim .
+docker run --rm -e WS_URL -e CP_ID -e VCP_ENTRY -e VCP_TTL_SECONDS=3600 scenergy-vpc-itaim
 ```
 
 ## Upstream

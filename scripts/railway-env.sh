@@ -1,6 +1,6 @@
 # Shared Railway defaults for lifecycle scripts.
 PROJECT_ID="${RAILWAY_PROJECT_ID:-e3b38292-35ba-4fa8-8bc3-000a43fa06d2}"
-SERVICE_NAME="${RAILWAY_SERVICE_NAME:-scenergy-vpc-simulator}"
+SERVICE_NAME="${RAILWAY_SERVICE_NAME:-scenergy-vpc-itaim}"
 ENVIRONMENT="${RAILWAY_ENVIRONMENT:-production}"
 VCP_TTL_SECONDS="${VCP_TTL_SECONDS:-1800}"
 

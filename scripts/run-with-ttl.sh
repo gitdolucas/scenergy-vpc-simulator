@@ -2,9 +2,12 @@
 set -eu
 
 TTL="${VCP_TTL_SECONDS:-1800}"
-echo "VCP session starting; TTL=${TTL}s ($((TTL / 60)) min)"
+ENTRY="${VCP_ENTRY:-index_16_2_connectors.ts}"
+echo "VCP session starting; TTL=${TTL}s ($((TTL / 60)) min) entry=${ENTRY}"
 
-npm run start:auto-restart -- index_16_2_connectors.ts &
+# Start admin/health listener before OCPP connect so Railway healthcheck can pass
+# while the charge point negotiates BootNotification with the CSMS.
+npm run start:auto-restart -- "${ENTRY}" &
 VCP_PID=$!
 
 cleanup() {
@@ -14,6 +17,9 @@ cleanup() {
 }
 
 trap cleanup INT TERM
+
+# Give the VCP admin HTTP server time to bind before the platform probes /health.
+sleep 5
 
 (
   remaining="$TTL"
